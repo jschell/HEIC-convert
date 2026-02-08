@@ -1,0 +1,86 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Extract version from tag
+        id: version
+        shell: bash
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Restore dependencies
+        run: dotnet restore HEICAutoConverter.sln
+
+      - name: Run tests
+        run: dotnet test tests/HEICAutoConverter.Tests.csproj --configuration Release --verbosity normal
+
+      - name: Publish self-contained executable
+        run: >
+          dotnet publish HEICAutoConverter.csproj
+          --configuration Release
+          --runtime win-x64
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:PublishTrimmed=true
+          -p:Version=${{ steps.version.outputs.VERSION }}
+          --output ./publish
+
+      - name: Create zip archive
+        shell: pwsh
+        run: Compress-Archive -Path ./publish/HEICAutoConverter.exe -DestinationPath ./publish/HEICAutoConverter-${{ github.ref_name }}-win-x64.zip
+
+      - name: Generate SHA256 checksums
+        shell: pwsh
+        run: |
+          $exeHash = (Get-FileHash ./publish/HEICAutoConverter.exe -Algorithm SHA256).Hash
+          $zipHash = (Get-FileHash ./publish/HEICAutoConverter-${{ github.ref_name }}-win-x64.zip -Algorithm SHA256).Hash
+          $checksums = @"
+          ``````
+          SHA256 Checksums:
+          $exeHash  HEICAutoConverter.exe
+          $zipHash  HEICAutoConverter-${{ github.ref_name }}-win-x64.zip
+          ``````
+          "@
+          echo "CHECKSUMS<<EOF" >> $env:GITHUB_OUTPUT
+          echo $checksums >> $env:GITHUB_OUTPUT
+          echo "EOF" >> $env:GITHUB_OUTPUT
+        id: checksums
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          body: |
+            ## Downloads
+
+            | File | Description |
+            |------|-------------|
+            | `HEICAutoConverter.exe` | Portable single-file executable (no installation needed) |
+            | `HEICAutoConverter-${{ github.ref_name }}-win-x64.zip` | Zipped portable executable |
+
+            ## System Requirements
+            - Windows 10 (1809+) or Windows 11
+            - No .NET runtime installation required (self-contained)
+
+            ${{ steps.checksums.outputs.CHECKSUMS }}
+          files: |
+            ./publish/HEICAutoConverter.exe
+            ./publish/HEICAutoConverter-${{ github.ref_name }}-win-x64.zip
