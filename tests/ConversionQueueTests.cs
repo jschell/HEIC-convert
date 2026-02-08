@@ -1,4 +1,5 @@
 using HEICAutoConverter.Core;
+using Xunit;
 
 namespace HEICAutoConverter.Tests;
 

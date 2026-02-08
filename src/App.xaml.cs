@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Windows;
 using HEICAutoConverter.Core;
 using HEICAutoConverter.UI;
+using Application = System.Windows.Application;
 
 namespace HEICAutoConverter;
 
