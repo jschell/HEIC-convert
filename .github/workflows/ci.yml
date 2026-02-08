@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, 'claude/**' ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore HEICAutoConverter.sln
+
+      - name: Build
+        run: dotnet build HEICAutoConverter.sln --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test tests/HEICAutoConverter.Tests.csproj --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx"
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: tests/TestResults/test-results.trx
