@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationIcon>assets\icon.ico</ApplicationIcon>
+    <RootNamespace>HEICAutoConverter</RootNamespace>
+    <AssemblyName>HEICAutoConverter</AssemblyName>
+    <Version>1.0.0</Version>
+    <Authors>J. Schell</Authors>
+    <Description>Automatically monitors folders and converts HEIC photos to JPG format in real-time.</Description>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <!-- Publish-only settings: applied via dotnet publish -p:PublishProfile=Release or CLI flags -->
+  <PropertyGroup Condition="'$(PublishSingleFile)' == 'true' Or '$(IsPublishing)' == 'true'">
+    <SelfContained>true</SelfContained>
+    <PublishTrimmed>true</PublishTrimmed>
+    <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="13.10.0" />
+    <PackageReference Include="Magick.NET.Core" Version="13.10.0" />
+    <PackageReference Include="Microsoft.Toolkit.Uwp.Notifications" Version="7.1.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="assets\icon.ico" />
+  </ItemGroup>
+
+</Project>
