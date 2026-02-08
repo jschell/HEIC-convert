@@ -111,7 +111,7 @@ public class ConversionEngine
         }
     }
 
-    private string GetOutputPath(string sourcePath)
+    internal string GetOutputPath(string sourcePath)
     {
         var nameWithoutExt = Path.GetFileNameWithoutExtension(sourcePath);
         var outputName = _settings.FileNamingPattern.Replace("{name}", nameWithoutExt) + ".jpg";
@@ -124,7 +124,7 @@ public class ConversionEngine
         };
     }
 
-    private string GetMirroredPath(string sourcePath, string outputName)
+    internal string GetMirroredPath(string sourcePath, string outputName)
     {
         var sourceDir = Path.GetDirectoryName(sourcePath)!;
 

@@ -1,6 +1,9 @@
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+
+[assembly: InternalsVisibleTo("HEICAutoConverter.Tests")]
 
 namespace HEICAutoConverter.Core;
 
@@ -20,11 +23,12 @@ public enum OriginalFileAction
 
 public class Settings
 {
-    private static readonly string AppDataFolder = Path.Combine(
+    private static readonly string DefaultAppDataFolder = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "HEICAutoConverter");
 
-    private static readonly string SettingsPath = Path.Combine(AppDataFolder, "settings.json");
+    private readonly string _appDataFolder;
+    private readonly string _settingsPath;
 
     public List<string> WatchFolders { get; set; } = new();
     public OutputStrategy OutputStrategy { get; set; } = OutputStrategy.SameFolder;
@@ -41,28 +45,58 @@ public class Settings
     public bool SkipExisting { get; set; } = true;
 
     [JsonIgnore]
-    public static string AppData => AppDataFolder;
+    public static string AppData => DefaultAppDataFolder;
+
+    public Settings() : this(null) { }
+
+    internal Settings(string? customAppDataFolder)
+    {
+        _appDataFolder = customAppDataFolder ?? DefaultAppDataFolder;
+        _settingsPath = Path.Combine(_appDataFolder, "settings.json");
+    }
 
     public void Save()
     {
-        Directory.CreateDirectory(AppDataFolder);
+        Directory.CreateDirectory(_appDataFolder);
         var options = new JsonSerializerOptions { WriteIndented = true };
-        File.WriteAllText(SettingsPath, JsonSerializer.Serialize(this, options));
+        File.WriteAllText(_settingsPath, JsonSerializer.Serialize(this, options));
     }
 
-    public static Settings Load()
+    public static Settings Load() => Load(null);
+
+    internal static Settings Load(string? customAppDataFolder)
     {
-        if (!File.Exists(SettingsPath))
-            return new Settings();
+        var folder = customAppDataFolder ?? DefaultAppDataFolder;
+        var path = Path.Combine(folder, "settings.json");
+
+        if (!File.Exists(path))
+            return new Settings(customAppDataFolder);
 
         try
         {
-            var json = File.ReadAllText(SettingsPath);
-            return JsonSerializer.Deserialize<Settings>(json) ?? new Settings();
+            var json = File.ReadAllText(path);
+            var settings = JsonSerializer.Deserialize<Settings>(json) ?? new Settings(customAppDataFolder);
+            // Re-initialize the paths since they aren't serialized
+            return new Settings(customAppDataFolder)
+            {
+                WatchFolders = settings.WatchFolders,
+                OutputStrategy = settings.OutputStrategy,
+                CustomOutputFolder = settings.CustomOutputFolder,
+                ArchiveFolder = settings.ArchiveFolder,
+                OriginalFileAction = settings.OriginalFileAction,
+                JpegQuality = settings.JpegQuality,
+                IncludeSubdirectories = settings.IncludeSubdirectories,
+                StartWithWindows = settings.StartWithWindows,
+                ShowNotifications = settings.ShowNotifications,
+                StartMinimized = settings.StartMinimized,
+                MaxConcurrentConversions = settings.MaxConcurrentConversions,
+                FileNamingPattern = settings.FileNamingPattern,
+                SkipExisting = settings.SkipExisting
+            };
         }
         catch
         {
-            return new Settings();
+            return new Settings(customAppDataFolder);
         }
     }
 
