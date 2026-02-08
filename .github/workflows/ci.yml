@@ -26,11 +26,12 @@ jobs:
         run: dotnet build HEICAutoConverter.sln --configuration Release --no-restore
 
       - name: Test
-        run: dotnet test tests/HEICAutoConverter.Tests.csproj --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx"
+        run: dotnet test tests/HEICAutoConverter.Tests.csproj --configuration Release --no-build --verbosity normal --results-directory ./TestResults --logger "trx;LogFileName=test-results.trx"
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: test-results
-          path: tests/TestResults/test-results.trx
+          path: ./TestResults/test-results.trx
+          if-no-files-found: warn

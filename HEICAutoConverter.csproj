@@ -6,10 +6,6 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationIcon>assets\icon.ico</ApplicationIcon>
-    <PublishSingleFile>true</PublishSingleFile>
-    <SelfContained>true</SelfContained>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <PublishTrimmed>true</PublishTrimmed>
     <RootNamespace>HEICAutoConverter</RootNamespace>
     <AssemblyName>HEICAutoConverter</AssemblyName>
     <Version>1.0.0</Version>
@@ -17,6 +13,13 @@
     <Description>Automatically monitors folders and converts HEIC photos to JPG format in real-time.</Description>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <!-- Publish-only settings: applied via dotnet publish -p:PublishProfile=Release or CLI flags -->
+  <PropertyGroup Condition="'$(PublishSingleFile)' == 'true' Or '$(IsPublishing)' == 'true'">
+    <SelfContained>true</SelfContained>
+    <PublishTrimmed>true</PublishTrimmed>
+    <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
   </PropertyGroup>
 
   <ItemGroup>
