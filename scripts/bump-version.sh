@@ -1,5 +1,6 @@
 #!/bin/bash
 # Bump version and create git tag
+# Reads current version from .csproj, bumps it, updates .csproj, and creates a git tag.
 # Usage: ./bump-version.sh [major|minor|patch]
 
 set -e
@@ -10,13 +11,35 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# Get latest tag
-LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-echo -e "${YELLOW}Latest tag: ${LATEST_TAG}${NC}"
+CSPROJ="HEICAutoConverter.csproj"
+
+# Find .csproj relative to repo root
+REPO_ROOT=$(git rev-parse --show-toplevel)
+CSPROJ_PATH="${REPO_ROOT}/${CSPROJ}"
+
+if [ ! -f "$CSPROJ_PATH" ]; then
+    echo -e "${RED}Error: ${CSPROJ} not found at ${CSPROJ_PATH}${NC}"
+    exit 1
+fi
+
+# Read current version from .csproj (single source of truth)
+CURRENT_VERSION=$(grep -oP '(?<=<Version>)[^<]+' "$CSPROJ_PATH")
+if [ -z "$CURRENT_VERSION" ]; then
+    echo -e "${RED}Error: No <Version> found in ${CSPROJ}${NC}"
+    exit 1
+fi
+
+echo -e "${YELLOW}Current version (from ${CSPROJ}): ${CURRENT_VERSION}${NC}"
+
+# Check if git tag already exists for this version
+if git rev-parse "v${CURRENT_VERSION}" >/dev/null 2>&1; then
+    echo -e "${YELLOW}Tag v${CURRENT_VERSION} already exists${NC}"
+else
+    echo -e "${YELLOW}Note: No git tag exists yet for v${CURRENT_VERSION}${NC}"
+fi
 
 # Extract version parts
-VERSION=${LATEST_TAG#v}
-IFS='.' read -ra PARTS <<< "$VERSION"
+IFS='.' read -ra PARTS <<< "$CURRENT_VERSION"
 MAJOR=${PARTS[0]:-0}
 MINOR=${PARTS[1]:-0}
 PATCH=${PARTS[2]:-0}
@@ -46,36 +69,46 @@ case $BUMP_TYPE in
     ;;
 esac
 
-NEW_VERSION="v${MAJOR}.${MINOR}.${PATCH}"
-echo -e "${GREEN}New version: ${NEW_VERSION}${NC}"
+NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+NEW_TAG="v${NEW_VERSION}"
+echo -e "${GREEN}New version: ${NEW_VERSION} (tag: ${NEW_TAG})${NC}"
 
-# Confirm before creating tag
-read -p "Create tag ${NEW_VERSION}? (y/N) " -n 1 -r
+# Confirm before making changes
+read -p "Update ${CSPROJ} and create tag ${NEW_TAG}? (y/N) " -n 1 -r
 echo
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     echo -e "${YELLOW}Cancelled.${NC}"
     exit 0
 fi
 
+# Update .csproj version
+sed -i "s|<Version>${CURRENT_VERSION}</Version>|<Version>${NEW_VERSION}</Version>|" "$CSPROJ_PATH"
+echo -e "${GREEN}Updated ${CSPROJ}: ${CURRENT_VERSION} -> ${NEW_VERSION}${NC}"
+
+# Stage and commit the version bump
+git add "$CSPROJ_PATH"
+git commit -m "Bump version to ${NEW_VERSION}"
+echo -e "${GREEN}Committed version bump${NC}"
+
 # Get release notes
-echo -e "${YELLOW}Enter release notes (Ctrl+D when done):${NC}"
+echo -e "${YELLOW}Enter release notes (Ctrl+D when done, or Enter then Ctrl+D to skip):${NC}"
 RELEASE_NOTES=$(cat)
 
 # Create annotated tag
 if [ -z "$RELEASE_NOTES" ]; then
-    git tag -a "$NEW_VERSION" -m "Release $NEW_VERSION"
+    git tag -a "$NEW_TAG" -m "Release ${NEW_VERSION}"
 else
-    git tag -a "$NEW_VERSION" -m "Release $NEW_VERSION
+    git tag -a "$NEW_TAG" -m "Release ${NEW_VERSION}
 
-$RELEASE_NOTES"
+${RELEASE_NOTES}"
 fi
 
-echo -e "${GREEN}✓ Tag created: ${NEW_VERSION}${NC}"
+echo -e "${GREEN}Tag created: ${NEW_TAG}${NC}"
 echo ""
 echo "Next steps:"
-echo "  1. Review the tag: git show $NEW_VERSION"
-echo "  2. Push to trigger release: git push origin $NEW_VERSION"
-echo "  3. Monitor at: https://github.com/$(git remote get-url origin | sed 's/.*github.com[:/]\(.*\)\.git/\1/')/actions"
+echo "  1. Review: git show ${NEW_TAG}"
+echo "  2. Push commit + tag: git push origin HEAD && git push origin ${NEW_TAG}"
+echo "  3. Monitor: https://github.com/$(git remote get-url origin | sed 's/.*github.com[:/]\(.*\)\.git/\1/')/actions"
 echo ""
-echo -e "${YELLOW}To delete this tag if you made a mistake:${NC}"
-echo "  git tag -d $NEW_VERSION"
+echo -e "${YELLOW}To undo (delete tag + revert commit):${NC}"
+echo "  git tag -d ${NEW_TAG} && git reset --soft HEAD~1"
