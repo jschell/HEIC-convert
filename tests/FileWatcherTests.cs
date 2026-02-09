@@ -1,3 +1,4 @@
+using System.IO;
 using HEICAutoConverter.Core;
 using Xunit;
 
