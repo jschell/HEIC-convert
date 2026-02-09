@@ -19,14 +19,8 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-
-      - name: Cache NuGet packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
-          restore-keys: |
-            ${{ runner.os }}-nuget-
+          cache: true
+          cache-dependency-path: '**/*.csproj'
 
       - name: Restore dependencies
         run: dotnet restore HEICAutoConverter.sln
@@ -36,7 +30,7 @@ jobs:
         continue-on-error: true
 
       - name: Build
-        run: dotnet build HEICAutoConverter.sln --configuration Release --no-restore /p:EnableNETAnalyzers=true /p:AnalysisLevel=latest
+        run: dotnet build HEICAutoConverter.sln --configuration Release /p:EnableNETAnalyzers=true /p:AnalysisLevel=latest
 
       - name: Test
         run: dotnet test tests/HEICAutoConverter.Tests.csproj --configuration Release --no-build --verbosity normal --results-directory ./TestResults --logger "trx;LogFileName=test-results.trx"
