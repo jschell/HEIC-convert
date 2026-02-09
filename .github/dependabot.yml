@@ -3,7 +3,35 @@
 
 version: 2
 updates:
-  # Monitor NuGet packages
+  # Security-critical NuGet packages (checked daily)
+  - package-ecosystem: "nuget"
+    directory: "/"
+    schedule:
+      interval: "daily"
+      time: "06:00"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "security"
+      - "nuget"
+    commit-message:
+      prefix: "security"
+      include: "scope"
+    # Only security updates for this config
+    allow:
+      - dependency-type: "all"
+    # Target security vulnerabilities specifically
+    groups:
+      security-updates:
+        patterns:
+          - "*"
+        update-types:
+          - "patch"
+    # Reviewers for security updates
+    reviewers:
+      - "jschell"
+
+  # Regular NuGet package updates (weekly)
   - package-ecosystem: "nuget"
     directory: "/"
     schedule:
@@ -25,6 +53,10 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    # Ignore security-only updates (handled by daily check above)
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-patch"]
 
   # Monitor GitHub Actions
   - package-ecosystem: "github-actions"
