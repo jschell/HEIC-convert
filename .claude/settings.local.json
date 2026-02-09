@@ -8,7 +8,10 @@
       "Bash(taskkill:*)",
       "Bash(dotnet publish:*)",
       "Bash(# Kill any existing instance first taskkill //F //IM HEICAutoConverter.exe sleep 1 # Launch the published single-file exe \"\"/c/Users/JSchell/.claude-worktrees/HEIC-convert/keen-jepsen/publish/HEICAutoConverter.exe\"\" & BGPID=$! sleep 8 if kill -0 $BGPID ; then echo \"\"SUCCESS: Process is running \\(PID: $BGPID\\)\"\" tasklist)",
-      "Bash(git -C \"/c/Users/JSchell/.claude-worktrees/HEIC-convert/keen-jepsen\" mv BUILD_ERROR_ITEMIZED_ANALYSIS.md BUILD_FAILURE_ANALYSIS.md BUILD_FIX_IMPLEMENTATION.md BUILD_STATUS_ANALYSIS.md BUILD_STATUS_CHECK.md docs/archive/)"
+      "Bash(git -C \"/c/Users/JSchell/.claude-worktrees/HEIC-convert/keen-jepsen\" mv BUILD_ERROR_ITEMIZED_ANALYSIS.md BUILD_FAILURE_ANALYSIS.md BUILD_FIX_IMPLEMENTATION.md BUILD_STATUS_ANALYSIS.md BUILD_STATUS_CHECK.md docs/archive/)",
+      "Bash(git -C \"/c/Users/JSchell/.claude-worktrees/HEIC-convert/keen-jepsen\" status)",
+      "Bash(git -C \"/c/Users/JSchell/.claude-worktrees/HEIC-convert/keen-jepsen\" diff)",
+      "Bash(git -C \"/c/Users/JSchell/.claude-worktrees/HEIC-convert/keen-jepsen\" log --oneline -10)"
     ]
   }
 }
