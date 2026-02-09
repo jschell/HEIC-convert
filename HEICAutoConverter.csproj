@@ -29,6 +29,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ApplicationDefinition Include="src\App.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </ApplicationDefinition>
+  </ItemGroup>
+
+  <ItemGroup>
     <Resource Include="assets\icon.ico" />
   </ItemGroup>
 

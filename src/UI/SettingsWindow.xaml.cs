@@ -79,7 +79,7 @@ public partial class SettingsWindow : Window
             UseDescriptionForTitle = true
         };
 
-        if (dialog.ShowDialog() == DialogResult.OK)
+        if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
         {
             if (!FolderList.Items.Contains(dialog.SelectedPath))
                 FolderList.Items.Add(dialog.SelectedPath);
@@ -100,7 +100,7 @@ public partial class SettingsWindow : Window
             UseDescriptionForTitle = true
         };
 
-        if (dialog.ShowDialog() == DialogResult.OK)
+        if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
             CustomOutputPath.Text = dialog.SelectedPath;
     }
 
@@ -112,7 +112,7 @@ public partial class SettingsWindow : Window
             UseDescriptionForTitle = true
         };
 
-        if (dialog.ShowDialog() == DialogResult.OK)
+        if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
             ArchivePath.Text = dialog.SelectedPath;
     }
 
