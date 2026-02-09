@@ -18,8 +18,8 @@
   <!-- Publish-only settings: applied via dotnet publish -p:PublishProfile=Release or CLI flags -->
   <PropertyGroup Condition="'$(PublishSingleFile)' == 'true' Or '$(IsPublishing)' == 'true'">
     <SelfContained>true</SelfContained>
-    <PublishTrimmed>true</PublishTrimmed>
-    <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
+    <!-- Trimming disabled: Windows Forms is not compatible with trimming -->
+    <PublishTrimmed>false</PublishTrimmed>
   </PropertyGroup>
 
   <ItemGroup>
