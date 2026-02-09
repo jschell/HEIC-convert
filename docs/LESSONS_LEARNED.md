@@ -260,6 +260,43 @@ on:
 
 ---
 
+### Issue 14: WPF/WinForms Single-File Publish Crash (DllNotFoundException)
+**Problem:** The GitHub Actions release build (`PublishSingleFile=true`, `SelfContained=true`) produced an exe that silently crashed on launch. No window, no error dialog — the process would start and immediately terminate.
+
+**Root Cause:** WPF and Windows Forms require native DLLs (`wpfgfx_cor3.dll`, `PresentationNative_cor3.dll`, `WindowsBase` interop) that **cannot be loaded from memory** inside a single-file bundle. Without `IncludeNativeLibrariesForSelfExtract=true`, these DLLs are not extracted to disk, causing:
+
+```
+System.DllNotFoundException: Dll was not found.
+   at MS.Internal.WindowsBase.NativeMethodsSetLastError.SetWindowLongPtrWndProc(...)
+   at MS.Win32.UnsafeNativeMethods.CriticalSetWindowLong(...)
+   at MS.Win32.HwndSubclass.HookWindowProc(...)
+```
+
+Exception code `0xe0434352` (CLR exception) followed by `0xc000041d` (unhandled exception termination) in Windows Event Log.
+
+**Why it only affected the release build:** Local `dotnet build --configuration Release` produces a multi-file, framework-dependent output where all DLLs sit alongside the exe. The GitHub Actions `dotnet publish` with `PublishSingleFile=true` bundles everything into one exe, but WPF native DLLs need disk extraction.
+
+**Solution:** Add `IncludeNativeLibrariesForSelfExtract=true` in both places:
+
+1. `.csproj` (publish-only PropertyGroup):
+```xml
+<IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+```
+
+2. `release.yml` (publish command):
+```yaml
+-p:IncludeNativeLibrariesForSelfExtract=true
+```
+
+**Debugging approach:** The crash was invisible because `OutputType=WinExe` suppresses console output and `OnStartup` had no global exception handler. The crash was found via:
+```powershell
+Get-WinEvent -FilterHashtable @{LogName='Application'; Level=2}
+```
+
+**Lesson:** WPF/WinForms + `PublishSingleFile` always requires `IncludeNativeLibrariesForSelfExtract=true`. Local builds won't catch this — always test the actual published artifact. Add global exception handling to surface silent crashes.
+
+---
+
 ## GitHub Actions Best Practices
 
 ### Best Practice 1: Workflow Timeouts
@@ -497,6 +534,6 @@ By documenting these lessons, future projects can avoid the same pitfalls and es
 
 ---
 
-**Document Version:** 1.0
+**Document Version:** 1.1
 **Last Updated:** 2026-02-09
 **Session:** https://claude.ai/code/session_01BVuTX2DF5HLayF8tpjnqxh
