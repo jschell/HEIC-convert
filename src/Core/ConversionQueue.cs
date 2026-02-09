@@ -71,7 +71,11 @@ public class ConversionQueue : IDisposable
         if (_isPaused)
         {
             _isPaused = false;
-            _pauseLock.Release();
+            // Only release if there are waiters (count is 0)
+            if (_pauseLock.CurrentCount == 0)
+            {
+                _pauseLock.Release();
+            }
             _log("Conversion queue resumed");
         }
     }
