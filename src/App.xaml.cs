@@ -5,6 +5,7 @@ using System.Windows;
 using HEICAutoConverter.Core;
 using HEICAutoConverter.UI;
 using Application = System.Windows.Application;
+using MessageBox = System.Windows.MessageBox;
 
 namespace HEICAutoConverter;
 

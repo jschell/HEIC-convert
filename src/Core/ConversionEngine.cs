@@ -59,7 +59,7 @@ public class ConversionEngine
 
                 using var image = new MagickImage(sourcePath);
                 image.Format = MagickFormat.Jpeg;
-                image.Quality = (uint)_settings.JpegQuality;
+                image.Quality = _settings.JpegQuality;
 
                 // Preserve EXIF orientation
                 image.AutoOrient();

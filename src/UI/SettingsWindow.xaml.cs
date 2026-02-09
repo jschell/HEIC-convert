@@ -3,6 +3,7 @@ using HEICAutoConverter.Core;
 using Microsoft.Win32;
 using FolderBrowserDialog = System.Windows.Forms.FolderBrowserDialog;
 using DialogResult = System.Windows.Forms.DialogResult;
+using MessageBox = System.Windows.MessageBox;
 
 namespace HEICAutoConverter.UI;
 
