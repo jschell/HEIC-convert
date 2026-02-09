@@ -185,7 +185,33 @@ image.Quality = (uint)_settings.JpegQuality;
 
 ## Release Process
 
-### Issue 10: Release Workflow Requires Git Tags
+### Issue 10: Windows Forms Incompatible with Trimming
+**Problem:** NETSDK1175 - "Windows Forms is not supported or recommended with trimming enabled"
+
+**Root Cause:** The project uses Windows Forms (`<UseWindowsForms>true`), but publish configuration had `<PublishTrimmed>true`.
+
+**Solution:**
+```xml
+<PropertyGroup Condition="'$(PublishSingleFile)' == 'true' Or '$(IsPublishing)' == 'true'">
+  <SelfContained>true</SelfContained>
+  <!-- Trimming disabled: Windows Forms is not compatible -->
+  <PublishTrimmed>false</PublishTrimmed>
+</PropertyGroup>
+```
+
+**Trade-offs:**
+- ❌ Larger binary size (~100-150MB vs 50-60MB)
+- ✅ All Windows Forms features work correctly
+- ✅ No runtime trimming errors
+- ✅ Self-contained deployment still works
+
+**Lesson:** Windows Forms and WPF applications cannot use trimming. Choose compatibility over size for desktop applications.
+
+**Reference:** https://aka.ms/dotnet-illink/windows-forms
+
+---
+
+### Issue 11: Release Workflow Requires Git Tags
 **Problem:** User expected release to be created automatically after PR merge.
 
 **Root Cause:** Release workflow only triggers on tag pushes, not commits.
@@ -206,7 +232,7 @@ on:
 
 ---
 
-### Issue 11: Semantic Versioning for Initial Development
+### Issue 12: Semantic Versioning for Initial Development
 **Problem:** Project started with version 1.0.0 before being production-ready.
 
 **Solution:** Changed to 0.1.0 following semantic versioning:
@@ -220,7 +246,7 @@ on:
 
 ---
 
-### Issue 12: Tag Push Permissions
+### Issue 13: Tag Push Permissions
 **Problem:** Claude Code couldn't push tags due to 403 permission errors.
 
 **Root Cause:** Tags require different permissions than branches in some authentication contexts.
