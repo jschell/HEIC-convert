@@ -44,6 +44,34 @@ jobs:
       - name: Test with coverage
         run: dotnet test tests/HEICAutoConverter.Tests.csproj --configuration Release --no-build --collect:"XPlat Code Coverage" --results-directory ./TestResults
 
+      - name: Publish single-file executable
+        run: >
+          dotnet publish HEICAutoConverter.csproj
+          --configuration Release
+          --runtime win-x64
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          --output ./publish
+
+      - name: Smoke test published executable
+        shell: pwsh
+        run: |
+          $proc = Start-Process ./publish/HEICAutoConverter.exe -PassThru
+          Start-Sleep -Seconds 5
+          if ($proc.HasExited) {
+            $events = Get-WinEvent -FilterHashtable @{LogName='Application'; Level=2; StartTime=(Get-Date).AddMinutes(-1)} -ErrorAction SilentlyContinue |
+              Where-Object { $_.Message -match 'HEICAutoConverter' } |
+              Select-Object -First 3 -ExpandProperty Message
+            Write-Error "Published exe crashed on startup (exit code: $($proc.ExitCode))"
+            if ($events) {
+              Write-Error "Event Log entries:`n$($events -join "`n---`n")"
+            }
+            exit 1
+          }
+          Write-Host "Smoke test passed: exe stayed alive for 5 seconds"
+          Stop-Process $proc -Force
+
       - name: Upload test results
         uses: actions/upload-artifact@v4
         if: always()
