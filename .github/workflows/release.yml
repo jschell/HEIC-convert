@@ -11,15 +11,33 @@ permissions:
 jobs:
   build-and-release:
     runs-on: windows-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate tag format
+        shell: pwsh
+        run: |
+          if ("${{ github.ref_name }}" -notmatch "^v\d+\.\d+\.\d+") {
+            Write-Error "Tag must be in format v#.#.# (e.g., v1.0.0)"
+            exit 1
+          }
+          Write-Host "Tag format valid: ${{ github.ref_name }}"
+
       - name: Setup .NET 8
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
 
       - name: Extract version from tag
         id: version
@@ -42,6 +60,13 @@ jobs:
           -p:PublishTrimmed=true
           -p:Version=${{ steps.version.outputs.VERSION }}
           --output ./publish
+
+      # TODO: Add code signing when certificate is available
+      # See WORKFLOW_IMPROVEMENTS.md section 4 for implementation details
+      # - name: Sign executable
+      #   shell: pwsh
+      #   run: |
+      #     # Code signing implementation here
 
       - name: Create zip archive
         shell: pwsh

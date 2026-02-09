@@ -9,6 +9,7 @@ on:
 jobs:
   build-and-test:
     runs-on: windows-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -19,14 +20,29 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
       - name: Restore dependencies
         run: dotnet restore HEICAutoConverter.sln
 
+      - name: Check for vulnerable packages
+        run: dotnet list package --vulnerable --include-transitive
+        continue-on-error: true
+
       - name: Build
-        run: dotnet build HEICAutoConverter.sln --configuration Release --no-restore
+        run: dotnet build HEICAutoConverter.sln --configuration Release /p:EnableNETAnalyzers=true /p:AnalysisLevel=latest
 
       - name: Test
         run: dotnet test tests/HEICAutoConverter.Tests.csproj --configuration Release --no-build --verbosity normal --results-directory ./TestResults --logger "trx;LogFileName=test-results.trx"
+
+      - name: Test with coverage
+        run: dotnet test tests/HEICAutoConverter.Tests.csproj --configuration Release --no-build --collect:"XPlat Code Coverage" --results-directory ./TestResults
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
@@ -35,3 +51,11 @@ jobs:
           name: test-results
           path: ./TestResults/test-results.trx
           if-no-files-found: warn
+
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-reports
+          path: ./TestResults/**/coverage.cobertura.xml
+          if-no-files-found: ignore

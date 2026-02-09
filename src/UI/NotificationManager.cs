@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows.Forms;
 using HEICAutoConverter.Core;
 

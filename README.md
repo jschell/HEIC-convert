@@ -1,5 +1,8 @@
 # HEIC Auto Converter
 
+[![CI](https://github.com/jschell/HEIC-convert/actions/workflows/ci.yml/badge.svg)](https://github.com/jschell/HEIC-convert/actions/workflows/ci.yml)
+[![Release](https://github.com/jschell/HEIC-convert/actions/workflows/release.yml/badge.svg)](https://github.com/jschell/HEIC-convert/actions/workflows/release.yml)
+
 A Windows system tray application that automatically monitors folders and converts HEIC/HEIF photos to JPG format in real-time.
 
 ## Features

@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.IO;
 using System.Threading.Channels;
 
 namespace HEICAutoConverter.Core;
@@ -67,9 +68,16 @@ public class ConversionQueue : IDisposable
 
     public void Resume()
     {
-        _isPaused = false;
-        _pauseLock.Release();
-        _log("Conversion queue resumed");
+        if (_isPaused)
+        {
+            _isPaused = false;
+            // Only release if there are waiters (count is 0)
+            if (_pauseLock.CurrentCount == 0)
+            {
+                _pauseLock.Release();
+            }
+            _log("Conversion queue resumed");
+        }
     }
 
     private async Task ProcessQueueAsync(CancellationToken cancellationToken)
