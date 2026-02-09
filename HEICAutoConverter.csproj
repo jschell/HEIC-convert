@@ -32,4 +32,11 @@
     <Resource Include="assets\icon.ico" />
   </ItemGroup>
 
+  <!-- Exclude test files from main project -->
+  <ItemGroup>
+    <Compile Remove="tests\**" />
+    <EmbeddedResource Remove="tests\**" />
+    <None Remove="tests\**" />
+  </ItemGroup>
+
 </Project>
