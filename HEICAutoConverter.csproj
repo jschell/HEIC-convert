@@ -8,7 +8,7 @@
     <ApplicationIcon>assets\icon.ico</ApplicationIcon>
     <RootNamespace>HEICAutoConverter</RootNamespace>
     <AssemblyName>HEICAutoConverter</AssemblyName>
-    <Version>0.1.0</Version>
+    <Version>0.1.1</Version>
     <Authors>J. Schell</Authors>
     <Description>Automatically monitors folders and converts HEIC photos to JPG format in real-time.</Description>
     <Nullable>enable</Nullable>
@@ -18,8 +18,8 @@
   <!-- Publish-only settings: applied via dotnet publish -p:PublishProfile=Release or CLI flags -->
   <PropertyGroup Condition="'$(PublishSingleFile)' == 'true' Or '$(IsPublishing)' == 'true'">
     <SelfContained>true</SelfContained>
-    <PublishTrimmed>true</PublishTrimmed>
-    <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
+    <!-- Trimming disabled: Windows Forms is not compatible with trimming -->
+    <PublishTrimmed>false</PublishTrimmed>
   </PropertyGroup>
 
   <ItemGroup>
