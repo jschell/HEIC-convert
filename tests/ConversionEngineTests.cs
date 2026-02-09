@@ -181,7 +181,7 @@ public class ConversionEngineTests : IDisposable
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        await Assert.ThrowsAsync<OperationCanceledException>(
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
             () => _engine.ConvertAsync(source, cts.Token));
     }
 

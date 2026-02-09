@@ -68,9 +68,12 @@ public class ConversionQueue : IDisposable
 
     public void Resume()
     {
-        _isPaused = false;
-        _pauseLock.Release();
-        _log("Conversion queue resumed");
+        if (_isPaused)
+        {
+            _isPaused = false;
+            _pauseLock.Release();
+            _log("Conversion queue resumed");
+        }
     }
 
     private async Task ProcessQueueAsync(CancellationToken cancellationToken)
