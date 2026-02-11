@@ -80,7 +80,6 @@ jobs:
           Stop-Process $proc -Force
 
       # TODO: Add code signing when certificate is available
-      # See WORKFLOW_IMPROVEMENTS.md section 4 for implementation details
       # - name: Sign executable
       #   shell: pwsh
       #   run: |
