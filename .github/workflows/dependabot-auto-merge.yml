@@ -1,0 +1,50 @@
+name: Dependabot Auto-Merge
+
+# Auto-merges Dependabot PRs after CI passes.
+# Patch/minor updates merge automatically with [bump patch] to trigger a release.
+# Major updates are approved but not merged — require manual review.
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    timeout-minutes: 5
+
+    steps:
+      - name: Fetch Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Auto-approve patch and minor updates
+        if: steps.metadata.outputs.update-type != 'version-update:semver-major'
+        run: gh pr review "$PR_URL" --approve --body "Auto-approved: ${{ steps.metadata.outputs.update-type }} update for ${{ steps.metadata.outputs.dependency-names }}"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Auto-merge patch and minor updates
+        if: steps.metadata.outputs.update-type != 'version-update:semver-major'
+        run: |
+          gh pr merge "$PR_URL" --squash --auto \
+            --subject "Update ${{ steps.metadata.outputs.dependency-names }} (${{ steps.metadata.outputs.update-type }}) [bump patch]"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Approve major updates (manual merge required)
+        if: steps.metadata.outputs.update-type == 'version-update:semver-major'
+        run: |
+          gh pr review "$PR_URL" --approve --body "Auto-approved major update for ${{ steps.metadata.outputs.dependency-names }}. **Manual merge required** — please review breaking changes."
+          gh pr comment "$PR_URL" --body "This is a **major version update** for \`${{ steps.metadata.outputs.dependency-names }}\`. Auto-merge is disabled for major updates. Please review for breaking changes and merge manually."
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

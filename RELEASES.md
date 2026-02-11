@@ -25,6 +25,17 @@ Breaking: new settings format [bump major]
 
 `[release]` is the default — it assumes you've already set the version in `.csproj` as part of your PR. Use `[bump patch]` / `[bump minor]` / `[bump major]` to let the workflow handle the version bump for you.
 
+### Dependabot Auto-Release
+
+Dependabot PRs are handled automatically by the [auto-merge workflow](.github/workflows/dependabot-auto-merge.yml):
+
+| Update Type | What Happens |
+|-------------|-------------|
+| Patch / Minor | CI must pass. Auto-approved, squash-merged with `[bump patch]` in the commit message, which triggers a release. |
+| Major | Auto-approved but **not merged**. Requires manual review for breaking changes. |
+
+The full chain: Dependabot PR -> CI passes -> auto-merge with `[bump patch]` -> auto-release workflow creates tag -> release workflow builds and publishes. No manual steps for patch/minor dependency updates.
+
 ### Method 2: Bump Script (Local)
 
 Run the script on main after merging. It reads the version from `.csproj`, bumps it, commits, creates a tag, and tells you what to push.
@@ -98,6 +109,8 @@ git push origin :refs/tags/v0.1.3
 |------|---------|
 | [`.github/workflows/release.yml`](.github/workflows/release.yml) | Build and publish on tag push |
 | [`.github/workflows/auto-release.yml`](.github/workflows/auto-release.yml) | Create tag from commit message keywords |
+| [`.github/workflows/dependabot-auto-merge.yml`](.github/workflows/dependabot-auto-merge.yml) | Auto-merge Dependabot PRs with `[bump patch]` |
+| [`.github/workflows/dependabot-failure-monitor.yml`](.github/workflows/dependabot-failure-monitor.yml) | Create issues when Dependabot PRs fail CI |
 | [`.github/workflows/ci.yml`](.github/workflows/ci.yml) | Test and smoke-test on every PR |
 | [`scripts/bump-version.sh`](scripts/bump-version.sh) | Local version bump (bash) |
 | [`scripts/bump-version.ps1`](scripts/bump-version.ps1) | Local version bump (PowerShell) |
