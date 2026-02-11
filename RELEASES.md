@@ -103,6 +103,15 @@ git push origin :refs/tags/v0.1.3
 # Delete the GitHub Release from the UI, fix the issue, then re-release
 ```
 
+## Setup: RELEASE_TOKEN
+
+The auto-release and Dependabot auto-merge workflows require a Personal Access Token to push tags that trigger the release workflow. (GitHub's default `GITHUB_TOKEN` cannot trigger other workflows — anti-loop protection.)
+
+1. Go to **GitHub Settings** -> **Developer settings** -> **Fine-grained personal access tokens**
+2. Create a token with **Contents: Read and write** permission scoped to this repo
+3. In the repo, go to **Settings** -> **Secrets and variables** -> **Actions**
+4. Add a repository secret named `RELEASE_TOKEN` with the token value
+
 ## Related Files
 
 | File | Purpose |
