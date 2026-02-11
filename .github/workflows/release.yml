@@ -1,30 +1,128 @@
 name: Release
 
+# Triggers on push to main. If the commit message contains a release keyword,
+# bumps the version, builds, tests, and publishes a GitHub Release.
+#
+# Keywords (in commit or PR squash message):
+#   [release]      - Release current .csproj version as-is
+#   [bump patch]   - Bump patch (0.1.2 -> 0.1.3), then release
+#   [bump minor]   - Bump minor (0.1.2 -> 0.2.0), then release
+#   [bump major]   - Bump major (0.1.2 -> 1.0.0), then release
+#
+# Uses RELEASE_TOKEN (PAT) so the version bump commit doesn't trigger
+# infinite loops via GITHUB_TOKEN anti-loop protection.
+
 on:
   push:
-    tags:
-      - 'v*'
+    branches: [main]
 
 permissions:
   contents: write
 
 jobs:
+  check-release:
+    if: >-
+      contains(github.event.head_commit.message, '[release]') ||
+      contains(github.event.head_commit.message, '[bump patch]') ||
+      contains(github.event.head_commit.message, '[bump minor]') ||
+      contains(github.event.head_commit.message, '[bump major]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_TOKEN }}
+
+      - name: Determine bump type
+        id: bump
+        shell: bash
+        run: |
+          MESSAGE="${{ github.event.head_commit.message }}"
+          if echo "$MESSAGE" | grep -q '\[bump major\]'; then
+            echo "type=major" >> "$GITHUB_OUTPUT"
+          elif echo "$MESSAGE" | grep -q '\[bump minor\]'; then
+            echo "type=minor" >> "$GITHUB_OUTPUT"
+          elif echo "$MESSAGE" | grep -q '\[bump patch\]'; then
+            echo "type=patch" >> "$GITHUB_OUTPUT"
+          elif echo "$MESSAGE" | grep -q '\[release\]'; then
+            echo "type=release" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Read and bump version
+        id: version
+        shell: bash
+        run: |
+          CURRENT=$(grep -oP '(?<=<Version>)[^<]+' HEICAutoConverter.csproj)
+          echo "Current version: ${CURRENT}"
+
+          BUMP_TYPE="${{ steps.bump.outputs.type }}"
+
+          if [ "$BUMP_TYPE" = "release" ]; then
+            NEW_VERSION="$CURRENT"
+          else
+            IFS='.' read -ra PARTS <<< "$CURRENT"
+            MAJOR=${PARTS[0]:-0}
+            MINOR=${PARTS[1]:-0}
+            PATCH=${PARTS[2]:-0}
+
+            case $BUMP_TYPE in
+              major)
+                MAJOR=$((MAJOR + 1))
+                MINOR=0
+                PATCH=0
+                ;;
+              minor)
+                MINOR=$((MINOR + 1))
+                PATCH=0
+                ;;
+              patch)
+                PATCH=$((PATCH + 1))
+                ;;
+            esac
+
+            NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+
+            if [ "$NEW_VERSION" != "$CURRENT" ]; then
+              sed -i "s|<Version>${CURRENT}</Version>|<Version>${NEW_VERSION}</Version>|" HEICAutoConverter.csproj
+              git config user.name "github-actions[bot]"
+              git config user.email "github-actions[bot]@users.noreply.github.com"
+              git add HEICAutoConverter.csproj
+              git commit -m "Bump version to ${NEW_VERSION}"
+              git push
+              echo "Bumped .csproj: ${CURRENT} -> ${NEW_VERSION}"
+            fi
+          fi
+
+          TAG="v${NEW_VERSION}"
+
+          # Fail loudly if tag already exists
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "::error::Tag ${TAG} already exists. Bump the version or use a different keyword."
+            exit 1
+          fi
+
+          echo "version=${NEW_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "Will create tag: ${TAG}"
+
   build-and-release:
+    needs: check-release
     runs-on: windows-latest
     timeout-minutes: 20
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Validate tag format
-        shell: pwsh
-        run: |
-          if ("${{ github.ref_name }}" -notmatch "^v\d+\.\d+\.\d+") {
-            Write-Error "Tag must be in format v#.#.# (e.g., v1.0.0)"
-            exit 1
-          }
-          Write-Host "Tag format valid: ${{ github.ref_name }}"
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_TOKEN }}
 
       - name: Setup .NET 8
         uses: actions/setup-dotnet@v4
@@ -38,11 +136,6 @@ jobs:
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
           restore-keys: |
             ${{ runner.os }}-nuget-
-
-      - name: Extract version from tag
-        id: version
-        shell: bash
-        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
       - name: Restore dependencies
         run: dotnet restore HEICAutoConverter.sln
@@ -58,7 +151,7 @@ jobs:
           --self-contained true
           -p:PublishSingleFile=true
           -p:IncludeNativeLibrariesForSelfExtract=true
-          -p:Version=${{ steps.version.outputs.VERSION }}
+          -p:Version=${{ needs.check-release.outputs.version }}
           --output ./publish
 
       - name: Smoke test published executable
@@ -80,7 +173,6 @@ jobs:
           Stop-Process $proc -Force
 
       # TODO: Add code signing when certificate is available
-      # See WORKFLOW_IMPROVEMENTS.md section 4 for implementation details
       # - name: Sign executable
       #   shell: pwsh
       #   run: |
@@ -88,28 +180,43 @@ jobs:
 
       - name: Create zip archive
         shell: pwsh
-        run: Compress-Archive -Path ./publish/HEICAutoConverter.exe -DestinationPath ./publish/HEICAutoConverter-${{ github.ref_name }}-win-x64.zip
+        run: Compress-Archive -Path ./publish/HEICAutoConverter.exe -DestinationPath ./publish/HEICAutoConverter-v${{ needs.check-release.outputs.version }}-win-x64.zip
 
       - name: Generate SHA256 checksums
         shell: pwsh
+        id: checksums
         run: |
+          $version = "${{ needs.check-release.outputs.version }}"
           $exeHash = (Get-FileHash ./publish/HEICAutoConverter.exe -Algorithm SHA256).Hash
-          $zipHash = (Get-FileHash ./publish/HEICAutoConverter-${{ github.ref_name }}-win-x64.zip -Algorithm SHA256).Hash
+          $zipHash = (Get-FileHash ./publish/HEICAutoConverter-v${version}-win-x64.zip -Algorithm SHA256).Hash
+
           $checksums = @"
           ``````
           SHA256 Checksums:
           $exeHash  HEICAutoConverter.exe
-          $zipHash  HEICAutoConverter-${{ github.ref_name }}-win-x64.zip
+          $zipHash  HEICAutoConverter-v${version}-win-x64.zip
           ``````
           "@
+
           echo "CHECKSUMS<<EOF" >> $env:GITHUB_OUTPUT
           echo $checksums >> $env:GITHUB_OUTPUT
           echo "EOF" >> $env:GITHUB_OUTPUT
-        id: checksums
+
+      - name: Create and push tag
+        shell: bash
+        run: |
+          TAG="${{ needs.check-release.outputs.tag }}"
+          VERSION="${{ needs.check-release.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "Release ${VERSION}"
+          git push origin "$TAG"
+          echo "Created and pushed tag: ${TAG}"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ needs.check-release.outputs.tag }}
           generate_release_notes: true
           body: |
             ## Downloads
@@ -117,7 +224,7 @@ jobs:
             | File | Description |
             |------|-------------|
             | `HEICAutoConverter.exe` | Portable single-file executable (no installation needed) |
-            | `HEICAutoConverter-${{ github.ref_name }}-win-x64.zip` | Zipped portable executable |
+            | `HEICAutoConverter-v${{ needs.check-release.outputs.version }}-win-x64.zip` | Zipped portable executable |
 
             ## System Requirements
             - Windows 10 (1809+) or Windows 11
@@ -126,4 +233,4 @@ jobs:
             ${{ steps.checksums.outputs.CHECKSUMS }}
           files: |
             ./publish/HEICAutoConverter.exe
-            ./publish/HEICAutoConverter-${{ github.ref_name }}-win-x64.zip
+            ./publish/HEICAutoConverter-v${{ needs.check-release.outputs.version }}-win-x64.zip
