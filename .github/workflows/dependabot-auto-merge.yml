@@ -26,7 +26,9 @@ jobs:
 
       - name: Auto-approve patch and minor updates
         if: steps.metadata.outputs.update-type != 'version-update:semver-major'
-        run: gh pr review "$PR_URL" --approve --body "Auto-approved: ${{ steps.metadata.outputs.update-type }} update for ${{ steps.metadata.outputs.dependency-names }}"
+        run: |
+          gh pr review "$PR_URL" --approve \
+            --body "Auto-approved: ${{ steps.metadata.outputs.update-type }} update for ${{ steps.metadata.outputs.dependency-names }}"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
