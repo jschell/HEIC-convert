@@ -1,332 +1,104 @@
-# Release Creation Guide
+# Releases
 
-## Quick Start - Create a Release
+## How to Release
 
-### Method 1: Automated Release (Recommended)
+There are three ways to create a release. All of them end the same way: a `v*` tag on main triggers the [release workflow](.github/workflows/release.yml), which builds, smoke-tests, and publishes the executable to GitHub Releases.
 
-The repository has an automated release workflow that triggers on version tags.
+### Method 1: Commit Message Keywords (Recommended)
 
-#### Step 1: Create and Push a Tag
+Include a keyword in your PR title or merge commit message. When the commit lands on main, the [auto-release workflow](.github/workflows/auto-release.yml) reads the version from `.csproj`, creates a tag, and the release workflow takes over.
 
-```bash
-# Make sure you're on main branch and up to date
-git checkout main
-git pull origin main
+| Keyword | Effect |
+|---------|--------|
+| `[release]` | Tag current `.csproj` version as-is (use when you've already bumped the version) |
+| `[bump patch]` | Bump patch (0.1.2 -> 0.1.3), update `.csproj`, commit, tag |
+| `[bump minor]` | Bump minor (0.1.2 -> 0.2.0), update `.csproj`, commit, tag |
+| `[bump major]` | Bump major (0.1.2 -> 1.0.0), update `.csproj`, commit, tag |
 
-# Create a version tag (format: v#.#.#)
-git tag -a v1.0.0 -m "Release v1.0.0 - First stable release"
+Examples:
 
-# Push the tag to GitHub
-git push origin v1.0.0
+```
+Fix conversion crash on locked files [release]
+Add dark mode support [bump minor]
+Breaking: new settings format [bump major]
 ```
 
-#### Step 2: Automated Build Process
+`[release]` is the default — it assumes you've already set the version in `.csproj` as part of your PR. Use `[bump patch]` / `[bump minor]` / `[bump major]` to let the workflow handle the version bump for you.
 
-The workflow automatically:
-1. ✅ Validates tag format (must be `v#.#.#`)
-2. ✅ Runs all tests
-3. ✅ Builds self-contained Windows executable
-4. ✅ Creates ZIP archive
-5. ✅ Generates SHA256 checksums
-6. ✅ Creates GitHub release with auto-generated notes
-7. ✅ Uploads binaries as release assets
+### Method 2: Bump Script (Local)
 
-#### Step 3: Monitor Progress
+Run the script on main after merging. It reads the version from `.csproj`, bumps it, commits, creates a tag, and tells you what to push.
 
-Watch the release build:
-- Go to: https://github.com/jschell/HEIC-convert/actions
-- Find the "Release" workflow run
-- Wait for completion (~2-3 minutes)
-
-#### Step 4: View the Release
-
-Once complete, your release will be available at:
-- https://github.com/jschell/HEIC-convert/releases
-
-## Release Commands Reference
-
-### Create a New Release
 ```bash
-# For version 1.0.0
-git tag -a v1.0.0 -m "Release v1.0.0: Initial release"
-git push origin v1.0.0
+# Bash
+./scripts/bump-version.sh patch    # 0.1.2 -> 0.1.3
+./scripts/bump-version.sh minor    # 0.1.2 -> 0.2.0
+./scripts/bump-version.sh major    # 0.1.2 -> 1.0.0
+
+# PowerShell
+.\scripts\bump-version.ps1 patch
+.\scripts\bump-version.ps1 minor
+.\scripts\bump-version.ps1 major
 ```
 
-### Create a Patch Release
+Then push both the commit and tag:
+
 ```bash
-# Bug fix release
-git tag -a v1.0.1 -m "Release v1.0.1: Fix critical bug in conversion queue"
-git push origin v1.0.1
+git push origin main && git push origin v0.1.3
 ```
 
-### Create a Minor Release
-```bash
-# New features (backwards compatible)
-git tag -a v1.1.0 -m "Release v1.1.0: Add dark mode support"
-git push origin v1.1.0
+### Method 3: GitHub UI
+
+1. Go to [Releases](../../releases) -> **Draft a new release**
+2. In **Choose a tag**, type `v0.1.3` -> **Create new tag on publish**
+3. Select **main** as the target branch
+4. Fill in title and notes, click **Publish release**
+
+## What the Release Workflow Does
+
+1. Validates tag format (`v#.#.#`)
+2. Runs full test suite
+3. Publishes self-contained single-file exe (`win-x64`, ~200 MB)
+4. Smoke-tests the published exe (catches startup crashes)
+5. Creates ZIP archive
+6. Generates SHA256 checksums
+7. Creates GitHub Release with artifacts and auto-generated notes
+
+## Version Source of Truth
+
+The version lives in `HEICAutoConverter.csproj`:
+
+```xml
+<Version>0.1.2</Version>
 ```
 
-### Create a Major Release
-```bash
-# Breaking changes
-git tag -a v2.0.0 -m "Release v2.0.0: Major UI overhaul"
-git push origin v2.0.0
-```
+All release methods read from this file. The release workflow passes the tag version to `dotnet publish` via `-p:Version=`, so the exe file properties always match the tag.
 
-### Delete a Tag (if you made a mistake)
-```bash
-# Delete local tag
-git tag -d v1.0.0
+## Versioning (Semver)
 
-# Delete remote tag
-git push origin :refs/tags/v1.0.0
-```
+| Bump | When | Example |
+|------|------|---------|
+| **Patch** | Bug fixes, security patches | 0.1.2 -> 0.1.3 |
+| **Minor** | New features, backwards compatible | 0.1.2 -> 0.2.0 |
+| **Major** | Breaking changes | 0.1.2 -> 1.0.0 |
 
-## Method 2: Manual Release (GitHub UI)
-
-If you prefer to create releases manually:
-
-### Step 1: Navigate to Releases
-1. Go to https://github.com/jschell/HEIC-convert/releases
-2. Click **"Draft a new release"**
-
-### Step 2: Create Tag
-1. Click **"Choose a tag"**
-2. Type new tag name (e.g., `v1.0.0`)
-3. Click **"Create new tag: v1.0.0 on publish"**
-
-### Step 3: Fill Release Details
-- **Release title**: `v1.0.0 - First Stable Release`
-- **Description**: Describe what's new/changed
-- Check **"Set as the latest release"**
-- Optionally check **"Create a discussion"**
-
-### Step 4: Upload Binaries
-1. Build locally:
-   ```bash
-   dotnet publish HEICAutoConverter.csproj \
-     --configuration Release \
-     --runtime win-x64 \
-     --self-contained true \
-     -p:PublishSingleFile=true \
-     -p:PublishTrimmed=true \
-     --output ./publish
-   ```
-2. Drag `HEICAutoConverter.exe` to the release assets area
-
-### Step 5: Publish
-Click **"Publish release"**
-
-## What Gets Released
-
-The automated workflow builds and publishes:
-
-### 📦 Release Artifacts
-
-1. **HEICAutoConverter.exe** (Standalone executable)
-   - Self-contained (no .NET runtime needed)
-   - Single-file deployment
-   - Trimmed for smaller size
-   - ~50-60MB file size
-
-2. **HEICAutoConverter-v#.#.#-win-x64.zip** (Zipped version)
-   - Contains the same executable
-   - Easier to download/distribute
-
-3. **SHA256 Checksums** (in release notes)
-   - For verifying download integrity
-   - Security best practice
-
-### 📝 Release Notes
-
-Auto-generated content includes:
-- List of commits since last release
-- Pull requests merged
-- Contributors
-- System requirements
-- Download instructions
-- Checksums
-
-## Versioning Strategy (Semantic Versioning)
-
-Use [Semantic Versioning](https://semver.org/): `MAJOR.MINOR.PATCH`
-
-### MAJOR version (v2.0.0)
-Increment when you make **breaking changes**:
-- Removing features
-- Changing APIs
-- Incompatible updates
-
-### MINOR version (v1.1.0)
-Increment when you add **new features** (backwards compatible):
-- New conversion options
-- Additional settings
-- UI improvements
-
-### PATCH version (v1.0.1)
-Increment for **bug fixes** (backwards compatible):
-- Crash fixes
-- Performance improvements
-- Security patches
-
-## Pre-releases
-
-For beta/alpha versions:
+## Fixing a Bad Release
 
 ```bash
-# Alpha release
-git tag -a v1.0.0-alpha.1 -m "Release v1.0.0-alpha.1: Testing new features"
-git push origin v1.0.0-alpha.1
+# Delete local and remote tag
+git tag -d v0.1.3
+git push origin :refs/tags/v0.1.3
 
-# Beta release
-git tag -a v1.0.0-beta.1 -m "Release v1.0.0-beta.1: Feature complete, testing"
-git push origin v1.0.0-beta.1
-
-# Release candidate
-git tag -a v1.0.0-rc.1 -m "Release v1.0.0-rc.1: Release candidate"
-git push origin v1.0.0-rc.1
-```
-
-Mark as pre-release in GitHub UI or workflow will auto-detect from tag name.
-
-## Release Checklist
-
-Before creating a release:
-
-- [ ] All tests passing on main
-- [ ] CI build successful
-- [ ] Version bumped in code (if applicable)
-- [ ] CHANGELOG updated (if you maintain one)
-- [ ] Breaking changes documented
-- [ ] Security vulnerabilities resolved
-- [ ] Documentation updated
-- [ ] Manual testing completed
-
-## Troubleshooting
-
-### "Tag must be in format v#.#.#"
-**Problem:** Tag doesn't match expected format
-
-**Solution:** Use semantic versioning format:
-```bash
-git tag -a v1.0.0 -m "Message"  # ✅ Correct
-git tag -a 1.0.0 -m "Message"   # ❌ Missing 'v' prefix
-git tag -a v1.0 -m "Message"    # ❌ Missing patch version
-```
-
-### Release workflow fails
-**Problem:** Build or test failures during release
-
-**Solution:**
-1. Check the Actions tab for error details
-2. Fix the issues
-3. Delete the failed tag: `git push origin :refs/tags/v1.0.0`
-4. Create a new tag after fixing
-
-### Wrong version in binary
-**Problem:** Executable shows wrong version
-
-**Solution:** Version is extracted from tag automatically. Ensure:
-- Tag format is correct: `v#.#.#`
-- No typos in the tag
-
-## Automation Enhancements (Optional)
-
-### Auto-increment Version
-
-Create a script to bump version automatically:
-
-```bash
-#!/bin/bash
-# bump-version.sh
-
-# Get latest tag
-LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-echo "Latest tag: $LATEST_TAG"
-
-# Extract version parts
-VERSION=${LATEST_TAG#v}
-IFS='.' read -ra PARTS <<< "$VERSION"
-MAJOR=${PARTS[0]}
-MINOR=${PARTS[1]}
-PATCH=${PARTS[2]}
-
-# Increment based on argument
-case $1 in
-  major)
-    MAJOR=$((MAJOR + 1))
-    MINOR=0
-    PATCH=0
-    ;;
-  minor)
-    MINOR=$((MINOR + 1))
-    PATCH=0
-    ;;
-  patch|*)
-    PATCH=$((PATCH + 1))
-    ;;
-esac
-
-NEW_VERSION="v${MAJOR}.${MINOR}.${PATCH}"
-echo "New version: $NEW_VERSION"
-
-# Create tag
-git tag -a "$NEW_VERSION" -m "Release $NEW_VERSION"
-echo "Tag created. Push with: git push origin $NEW_VERSION"
-```
-
-Usage:
-```bash
-chmod +x bump-version.sh
-./bump-version.sh patch  # v1.0.0 -> v1.0.1
-./bump-version.sh minor  # v1.0.1 -> v1.1.0
-./bump-version.sh major  # v1.1.0 -> v2.0.0
+# Delete the GitHub Release from the UI, fix the issue, then re-release
 ```
 
 ## Related Files
 
-- [Release Workflow](.github/workflows/release.yml) - Automated release process
-- [CI Workflow](.github/workflows/ci.yml) - Pre-release testing
-- [Project File](HEICAutoConverter.csproj) - Build configuration
-
-## Examples
-
-### Creating Your First Release
-
-```bash
-# Ensure main is up to date
-git checkout main
-git pull origin main
-
-# Create v1.0.0 release
-git tag -a v1.0.0 -m "Release v1.0.0
-
-## What's New
-- Automatic HEIC to JPG conversion
-- Real-time folder monitoring
-- Configurable output quality
-- Multiple output strategies
-- Windows toast notifications
-
-## System Requirements
-- Windows 10 (1809+) or Windows 11
-- No .NET runtime required"
-
-# Push the tag
-git push origin v1.0.0
-
-# Monitor at: https://github.com/jschell/HEIC-convert/actions
-```
-
-### Release Schedule Suggestion
-
-- **Patch releases**: As needed for bugs (e.g., weekly if issues found)
-- **Minor releases**: Monthly for new features
-- **Major releases**: Yearly or when breaking changes necessary
-
-## Support
-
-For issues with releases:
-- Check [Actions](https://github.com/jschell/HEIC-convert/actions) for build logs
-- Review [Releases](https://github.com/jschell/HEIC-convert/releases) page
-- Open an issue if workflow fails
+| File | Purpose |
+|------|---------|
+| [`.github/workflows/release.yml`](.github/workflows/release.yml) | Build and publish on tag push |
+| [`.github/workflows/auto-release.yml`](.github/workflows/auto-release.yml) | Create tag from commit message keywords |
+| [`.github/workflows/ci.yml`](.github/workflows/ci.yml) | Test and smoke-test on every PR |
+| [`scripts/bump-version.sh`](scripts/bump-version.sh) | Local version bump (bash) |
+| [`scripts/bump-version.ps1`](scripts/bump-version.ps1) | Local version bump (PowerShell) |
+| [`HEICAutoConverter.csproj`](HEICAutoConverter.csproj) | Version source of truth |
