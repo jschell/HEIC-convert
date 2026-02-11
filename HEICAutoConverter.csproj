@@ -8,7 +8,7 @@
     <ApplicationIcon>assets\icon.ico</ApplicationIcon>
     <RootNamespace>HEICAutoConverter</RootNamespace>
     <AssemblyName>HEICAutoConverter</AssemblyName>
-    <Version>0.1.5</Version>
+    <Version>0.1.6</Version>
     <Authors>J. Schell</Authors>
     <Copyright>Copyright © 2026 J. Schell</Copyright>
     <Description>Automatically monitors folders and converts HEIC photos to JPG format in real-time.</Description>
