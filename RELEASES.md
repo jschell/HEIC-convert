@@ -80,17 +80,16 @@ The winget job uses `continue-on-error: true` — if the submission fails, the G
 
 ### WinGet First-Time Setup
 
-The initial package submission to winget-pkgs was done manually using `wingetcreate new`. Subsequent updates are fully automated by [vedantmgoyal9/winget-releaser](https://github.com/vedantmgoyal9/winget-releaser).
+The initial package submission to winget-pkgs was done manually using `wingetcreate new`. Subsequent updates are fully automated by [wingetcreate](https://github.com/microsoft/winget-create) (Microsoft's official tool).
 
 Prerequisites:
-1. The `WINGET_TOKEN` secret must be a **Classic PAT** with `public_repo` scope (fine-grained tokens are not supported)
-2. The PAT owner must have a fork of `microsoft/winget-pkgs`
+1. The `WINGET_TOKEN` secret must be a **Classic PAT** with `public_repo` scope (fine-grained tokens are not supported by wingetcreate)
 
 ### WinGet Troubleshooting
 
 - **Expired PAT** — generate a new Classic PAT and update the `WINGET_TOKEN` secret
-- **Fork out of sync** — komac runs `sync-fork` automatically, but if it fails, sync manually
 - **Validation changes** — winget-pkgs occasionally updates manifest schema; check the action logs
+- **wingetcreate version** — installed via `dotnet tool install --global Microsoft.WingetCreate`; update if schema changes
 
 ## Version Source of Truth
 
@@ -137,8 +136,7 @@ The winget submission requires a Classic PAT to submit PRs to `microsoft/winget-
 
 1. Go to **GitHub Settings** → **Developer settings** → **Personal access tokens (classic)**
 2. Create a token with `public_repo` scope
-3. Fork `microsoft/winget-pkgs` from the same account
-4. Add a repository secret named `WINGET_TOKEN`
+3. Add a repository secret named `WINGET_TOKEN`
 
 ## Related Files
 
