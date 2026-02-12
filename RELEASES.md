@@ -89,7 +89,7 @@ Prerequisites:
 
 - **Expired PAT** — generate a new Classic PAT and update the `WINGET_TOKEN` secret
 - **Validation changes** — winget-pkgs occasionally updates manifest schema; check the action logs
-- **wingetcreate version** — installed via `dotnet tool install --global Microsoft.WingetCreate`; update if schema changes
+- **wingetcreate version** — downloaded from `https://aka.ms/wingetcreate/latest`; always pulls the latest release
 
 ## Version Source of Truth
 
