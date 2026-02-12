@@ -58,6 +58,38 @@ Run on main after merging. Reads version from `.csproj`, bumps, commits, creates
 6. Creates tag **only after build passes** (no orphaned tags from failed builds)
 7. Creates ZIP archive with SHA256 checksums
 8. Publishes GitHub Release with artifacts
+9. Submits package update to WinGet (via `publish-to-winget` job)
+
+## WinGet Distribution
+
+Every release is automatically submitted to the [Windows Package Manager Community Repository](https://github.com/microsoft/winget-pkgs) via the `publish-to-winget` job in the release workflow.
+
+| Detail | Value |
+|--------|-------|
+| PackageIdentifier | `JSchell.HEICAutoConverter` |
+| InstallerType | `portable` (bare .exe, no installer) |
+| Token Secret | `WINGET_TOKEN` (Classic PAT, `public_repo` scope) |
+
+Users can install via:
+
+```
+winget install JSchell.HEICAutoConverter
+```
+
+The winget job uses `continue-on-error: true` — if the submission fails, the GitHub Release is unaffected.
+
+### WinGet First-Time Setup
+
+The initial package submission to winget-pkgs was done manually using `wingetcreate new`. Subsequent updates are fully automated by [wingetcreate](https://github.com/microsoft/winget-create) (Microsoft's official tool).
+
+Prerequisites:
+1. The `WINGET_TOKEN` secret must be a **Classic PAT** with `public_repo` scope (fine-grained tokens are not supported by wingetcreate)
+
+### WinGet Troubleshooting
+
+- **Expired PAT** — generate a new Classic PAT and update the `WINGET_TOKEN` secret
+- **Validation changes** — winget-pkgs occasionally updates manifest schema; check the action logs
+- **wingetcreate version** — installed via `dotnet tool install --global Microsoft.WingetCreate`; update if schema changes
 
 ## Version Source of Truth
 
@@ -87,14 +119,24 @@ git push origin :refs/tags/v0.1.3
 # Delete the GitHub Release from the UI, fix the issue, then re-release
 ```
 
-## Setup: RELEASE_TOKEN
+## Setup: Secrets
 
-The release workflow requires a Personal Access Token to push version bump commits and tags to main. (GitHub's default `GITHUB_TOKEN` cannot trigger workflows or push when branch protection is active.)
+### RELEASE_TOKEN
+
+The release workflow requires a PAT to push version bump commits and tags to main.
 
 1. Go to **GitHub Settings** → **Developer settings** → **Fine-grained personal access tokens**
 2. Create a token with **Contents: Read and write** permission scoped to this repo
 3. In the repo, go to **Settings** → **Secrets and variables** → **Actions**
-4. Add a repository secret named `RELEASE_TOKEN` with the token value
+4. Add a repository secret named `RELEASE_TOKEN`
+
+### WINGET_TOKEN
+
+The winget submission requires a Classic PAT to submit PRs to `microsoft/winget-pkgs`.
+
+1. Go to **GitHub Settings** → **Developer settings** → **Personal access tokens (classic)**
+2. Create a token with `public_repo` scope
+3. Add a repository secret named `WINGET_TOKEN`
 
 ## Related Files
 

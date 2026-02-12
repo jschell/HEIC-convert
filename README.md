@@ -7,6 +7,12 @@ iPhones and iPads save photos in HEIC format, which many Windows apps and websit
 
 ## Installation
 
+### WinGet
+
+```
+winget install JSchell.HEICAutoConverter
+```
+
 ### Download
 
 Download `HEICAutoConverter.exe` from [Releases](../../releases) and run it. No installation required.

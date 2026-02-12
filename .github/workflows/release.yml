@@ -234,3 +234,22 @@ jobs:
           files: |
             ./publish/HEICAutoConverter.exe
             ./publish/HEICAutoConverter-v${{ needs.check-release.outputs.version }}-win-x64.zip
+
+  publish-to-winget:
+    name: Publish to WinGet
+    needs: [check-release, build-and-release]
+    runs-on: windows-latest
+    timeout-minutes: 10
+    continue-on-error: true
+
+    steps:
+      - name: Install wingetcreate
+        run: dotnet tool install --global Microsoft.WingetCreate
+
+      - name: Submit to WinGet
+        run: |
+          wingetcreate update JSchell.HEICAutoConverter `
+            --version ${{ needs.check-release.outputs.version }} `
+            --urls https://github.com/jschell/HEIC-convert/releases/download/${{ needs.check-release.outputs.tag }}/HEICAutoConverter.exe `
+            --submit `
+            --token ${{ secrets.WINGET_TOKEN }}
