@@ -234,3 +234,20 @@ jobs:
           files: |
             ./publish/HEICAutoConverter.exe
             ./publish/HEICAutoConverter-v${{ needs.check-release.outputs.version }}-win-x64.zip
+
+  publish-to-winget:
+    name: Publish to WinGet
+    needs: [check-release, build-and-release]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+
+    steps:
+      - name: Submit to WinGet
+        uses: vedantmgoyal9/winget-releaser@v2
+        with:
+          identifier: JSchell.HEICAutoConverter
+          version: ${{ needs.check-release.outputs.version }}
+          release-tag: ${{ needs.check-release.outputs.tag }}
+          installers-regex: '\.exe$'
+          token: ${{ secrets.WINGET_TOKEN }}
